@@ -1,0 +1,23 @@
+.integrationsContainer {
+  width: 100%;
+  max-width: 800px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 15px;
+  padding: 2rem;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+.title {
+  color: #ffffff;
+  text-align: center;
+  margin-bottom: 2rem;
+  font-size: 2.5rem;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+.description {
+  font-size: 1.2rem;
+  color: #666;
+  margin-bottom: 2rem;
+}
