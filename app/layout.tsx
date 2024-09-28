@@ -6,11 +6,6 @@ import styles from './layout.module.css';
 
 const inter = Inter({ subsets: ['latin'] })
 
-export const metadata = {
-  title: 'Novilife v0',
-  description: 'Your personal health and productivity assistant',
-}
-
 export default function RootLayout({
   children,
 }: {
@@ -26,6 +21,7 @@ export default function RootLayout({
                 <Link href="/" className={styles.navItem}>Home</Link>
                 <Link href="/dashboard" className={styles.navItem}>Dashboard</Link>
                 <Link href="/chat" className={styles.navItem}>Chat</Link>
+                <Link href="/chat2" className={styles.navItem}>Chat2</Link>
                 <Link href="/integrations" className={styles.navItem}>Integrations</Link>
                 <Link href="/history" className={styles.navItem}>History</Link>
               </nav>
