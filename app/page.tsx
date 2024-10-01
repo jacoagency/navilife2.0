@@ -1,36 +1,42 @@
-import { SignedIn, SignedOut } from '@clerk/nextjs';
-import Link from 'next/link';
-import styles from './page.module.css';
+"use client";
+
+import { useAuth, SignIn } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 export default function Home() {
+  const { isSignedIn, isLoaded } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      router.push('/dashboard');
+    }
+  }, [isSignedIn, isLoaded, router]);
+
+  if (!isLoaded) {
+    return <div>Loading...</div>;
+  }
+
+  if (isSignedIn) {
+    return null; // This will be briefly shown before redirecting to dashboard
+  }
+
   return (
-    <div className={styles.container}>
-      <SignedIn>
-        <h1 className={styles.title}>Welcome to NaviLife 2.0</h1>
-        <div className={styles.grid}>
-          <Link href="/dashboard" className={styles.card}>
-            <h2>Dashboard &rarr;</h2>
-            <p>View your personal dashboard and statistics.</p>
-          </Link>
-          <Link href="/chat" className={styles.card}>
-            <h2>Chat &rarr;</h2>
-            <p>Start a conversation with our AI assistant.</p>
-          </Link>
-          <Link href="/integrations" className={styles.card}>
-            <h2>Integrations &rarr;</h2>
-            <p>Manage your connected services and apps.</p>
-          </Link>
-          <Link href="/history" className={styles.card}>
-            <h2>History &rarr;</h2>
-            <p>Review your past interactions and data.</p>
-          </Link>
-        </div>
-      </SignedIn>
-      <SignedOut>
-        <h1 className={styles.title}>Welcome to NaviLife 2.0</h1>
-        <p className={styles.description}>Please sign in to access your personal health and productivity assistant.</p>
-        <Link href="/sign-in" className={styles.signInButton}>Sign In</Link>
-      </SignedOut>
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      height: '100vh',
+      backgroundColor: '#343541',
+    }}>
+      <h1 style={{
+        fontSize: '2.5rem',
+        color: '#ffffff',
+        marginBottom: '2rem',
+      }}>Welcome to NaviLife 2.0</h1>
+      <SignIn redirectUrl="/dashboard" />
     </div>
   );
 }
