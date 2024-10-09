@@ -63,11 +63,14 @@ export default function Navbar() {
             <Link href="/chat" style={isActive('/chat') ? activeLinkStyle : linkStyle}>
               Chat
             </Link>
-            <Link href="/chat2" style={isActive('/chat2') ? activeLinkStyle : linkStyle}>
-              Chat2
+            <Link href="/room" style={isActive('/room') ? activeLinkStyle : linkStyle}>
+              Room
             </Link>
             <Link href="/history" style={isActive('/history') ? activeLinkStyle : linkStyle}>
               History
+            </Link>
+            <Link href="/integrations" style={isActive('/integrations') ? activeLinkStyle : linkStyle}>
+              Integrations
             </Link>
           </div>
           <UserButton afterSignOutUrl="/" />

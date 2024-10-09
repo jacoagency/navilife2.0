@@ -1,4 +1,3 @@
-// tailwind.config.js
 module.exports = {
   content: [
     './pages/**/*.{js,ts,jsx,tsx}',
@@ -6,11 +5,7 @@ module.exports = {
     './app/**/*.{js,ts,jsx,tsx}',
   ],
   theme: {
-    extend: {
-      fontFamily: {
-        sans: ['Inter', 'sans-serif'],
-      },
-    },
+    extend: {},
   },
   plugins: [],
 };
