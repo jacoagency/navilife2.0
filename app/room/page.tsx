@@ -79,71 +79,74 @@ export default function EnhancedChatInterface() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-b from-blue-900 to-blue-600">
-      {/* Header section with a sleek, modern style */}
-      <div className="bg-blue-800 text-white p-4 flex items-center space-x-3 shadow-lg">
-        <div className="w-10 h-10 bg-gray-300 rounded-full"></div>
-        <div>
-          <h1 className="font-semibold text-lg">Assistant Chat</h1>
-          <p className="text-xs opacity-75">Online</p>
+    <div className="flex flex-col w-full h-screen bg-gradient-to-b from-blue-900 to-blue-600">
+      {/* Chat Container */}
+      <div className="flex flex-col w-full h-full bg-white overflow-hidden">
+        {/* Header section */}
+        <div className="bg-blue-800 text-white p-4 flex items-center space-x-4 shadow-md">
+          <div className="w-10 h-10 bg-gray-300 rounded-full"></div>
+          <div>
+            <h1 className="font-semibold text-lg">Assistant Chat</h1>
+            <p className="text-xs opacity-75">Online</p>
+          </div>
+          <div className="ml-auto flex space-x-4">
+            <button className="text-white hover:opacity-75"><FiPaperclip size={20} /></button>
+            <button className="text-white hover:opacity-75"><FiMic size={20} /></button>
+          </div>
         </div>
-        <div className="ml-auto flex space-x-2">
-          <button className="text-white hover:opacity-75"><FiPaperclip size={18} /></button>
-          <button className="text-white hover:opacity-75"><FiMic size={18} /></button>
-        </div>
-      </div>
 
-      {/* Chat area with message bubbles */}
-      <div className="flex-grow overflow-y-auto p-4 space-y-2">
-        {messages.map((message, index) => (
-          <div
-            key={index}
-            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
+        {/* Chat area */}
+        <div className="flex-grow overflow-y-auto p-4 space-y-4 bg-gray-100">
+          {messages.map((message, index) => (
             <div
-              className={`max-w-[70%] p-3 rounded-lg ${
-                message.role === 'user'
-                  ? 'bg-blue-500 text-white rounded-tr-none'
-                  : 'bg-white text-black rounded-tl-none shadow-md'
-              } shadow-md`}
+              key={index}
+              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
-              <p>{message.content}</p>
-              <p className="text-xs text-gray-500 text-right mt-1">
-                {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </p>
+              <div
+                className={`max-w-[70%] p-3 rounded-lg ${
+                  message.role === 'user'
+                    ? 'bg-blue-500 text-white rounded-tr-none'
+                    : 'bg-white text-black rounded-tl-none shadow-md'
+                }`}
+              >
+                <p>{message.content}</p>
+                <p className="text-xs text-gray-500 text-right mt-1">
+                  {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </p>
+              </div>
             </div>
-          </div>
-        ))}
-        {isLoading && (
-          <div className="flex justify-start">
-            <div className="bg-white p-3 rounded-lg text-black animate-pulse shadow-md">
-              Typing...
+          ))}
+          {isLoading && (
+            <div className="flex justify-start">
+              <div className="bg-white p-3 rounded-lg text-black animate-pulse shadow-md">
+                Typing...
+              </div>
             </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input area with refined styling */}
-      <form onSubmit={sendMessage} className="p-4 bg-gray-200 border-t border-gray-300 shadow-inner">
-        <div className="flex items-center space-x-3">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            className="flex-grow p-3 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Write a message..."
-            disabled={isLoading}
-          />
-          <button 
-            type="submit" 
-            className="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition duration-150 ease-in-out"
-            disabled={isLoading}
-          >
-            <FiSend size={24} />
-          </button>
+          )}
+          <div ref={messagesEndRef} />
         </div>
-      </form>
+
+        {/* Input area */}
+        <form onSubmit={sendMessage} className="p-4 bg-gray-200 border-t border-gray-300">
+          <div className="flex items-center space-x-2">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              className="flex-grow p-2 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+              placeholder="Write a message..."
+              disabled={isLoading}
+            />
+            <button 
+              type="submit" 
+              className="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition duration-150 ease-in-out"
+              disabled={isLoading}
+            >
+              <FiSend size={24} />
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

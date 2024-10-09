@@ -14,10 +14,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <ClerkProvider>
-      <html lang="en">
-        <body className={`${inter.className} font-sans bg-gradient-to-b from-blue-900 to-blue-700 text-white`}>
+      <html lang="en" className="h-full">
+        <body className={`${inter.className} flex flex-col h-full`}>
           <Navbar />
-          <main className="min-h-screen p-6 flex flex-col items-center justify-center">
+          <main className="flex-grow pt-16"> {/* Add pt-16 here */}
             {children}
           </main>
         </body>
