@@ -72,6 +72,9 @@ export default function Navbar() {
             <Link href="/integrations" style={isActive('/integrations') ? activeLinkStyle : linkStyle}>
               Integrations
             </Link>
+            <Link href="/studio" style={isActive('/studio') ? activeLinkStyle : linkStyle}>
+              Studio
+            </Link>
           </div>
           <UserButton afterSignOutUrl="/" />
         </>
