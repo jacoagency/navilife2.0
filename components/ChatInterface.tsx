@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { selectLLM, generateResponse } from '@/lib/ai';
 import { saveChat, getUserHistory } from '@/lib/database';
@@ -18,9 +18,17 @@ export default function ChatInterface() {
   const [chatHistory, setChatHistory] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Ref to scroll to the bottom of the chat messages
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (user) loadUserHistory();
   }, [user]);
+
+  // Scroll to bottom when chatHistory changes
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatHistory]);
 
   const loadUserHistory = async () => {
     try {
@@ -55,22 +63,29 @@ export default function ChatInterface() {
   };
 
   return (
+    // Remove h-screen and rely on parent container
     <div className="flex flex-col h-full">
-      <div className="flex-grow p-4 space-y-4">
-        {chatHistory.slice(-5).map((message, index) => (
+      {/* Chat messages area */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {chatHistory.map((message, index) => (
           <div key={index} className={`${message.role === 'user' ? 'text-right' : 'text-left'}`}>
-            <div className={`inline-block max-w-[70%] p-3 rounded-lg ${
-              message.role === 'user' ? 'bg-blue-100 text-blue-900' : 'bg-gray-100 text-gray-900'
-            }`}>
+            <div
+              className={`inline-block max-w-[70%] p-3 rounded-lg ${
+                message.role === 'user' ? 'bg-blue-100 text-blue-900' : 'bg-gray-100 text-gray-900'
+              }`}
+            >
               <p>{message.content}</p>
-              {message.llm && <p className="text-xs mt-1 opacity-75">via {message.llm}</p>}
+              {message.llm && (
+                <p className="text-xs mt-1 opacity-75">via {message.llm.toUpperCase()}</p>
+              )}
             </div>
           </div>
         ))}
-        {isLoading && (
-          <div className="text-center text-gray-500">Thinking...</div>
-        )}
+        {isLoading && <div className="text-center text-gray-500">Thinking...</div>}
+        {/* Dummy div to maintain scroll position */}
+        <div ref={messagesEndRef} />
       </div>
+      {/* Input area */}
       <form onSubmit={handleSubmit} className="p-4 border-t border-gray-200">
         <div className="flex items-center space-x-2">
           <input

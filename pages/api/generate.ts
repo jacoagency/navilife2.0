@@ -18,14 +18,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'LLM and prompt are required' });
   }
 
-  console.log(`Received request for LLM: ${llm}`);
-  console.log(`Prompt: ${prompt}`);
-  console.log(`History: ${JSON.stringify(history)}`);
-
   try {
     let response: string;
-
-    console.log(`Generating response for LLM: ${llm}`);
 
     switch (llm) {
       case 'gpt':
@@ -41,34 +35,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         throw new Error(`Unsupported LLM: ${llm}`);
     }
 
-    console.log(`Response generated successfully for ${llm}`);
-    console.log(`Response: ${response}`);
     res.status(200).json({ response });
   } catch (error) {
     console.error('Error generating response:', error);
-    res.status(500).json({ error: 'Failed to generate response', details: error instanceof Error ? error.message : String(error) });
+    res.status(500).json({
+      error: 'Failed to generate response',
+      details: error instanceof Error ? error.message : String(error),
+    });
   }
 }
 
 async function generateGPTResponse(prompt: string, history: any[]): Promise<string> {
-  console.log('Using GPT-3.5-turbo');
   try {
-    // Asegúrate de que history sea un array y tenga el formato correcto
-    const formattedHistory = Array.isArray(history) ? history.map(msg => ({
-      role: msg.role || 'user',
-      content: msg.content || '' // Usa una cadena vacía si content es null
-    })).filter(msg => msg.content !== '') : []; // Filtra los mensajes con contenido vacío
+    const formattedHistory = Array.isArray(history)
+      ? history
+          .map((msg) => ({
+            role: msg.role || 'user',
+            content: msg.content || '',
+          }))
+          .filter((msg) => msg.content.trim() !== '')
+      : [];
 
-    // Añade el nuevo prompt al final del historial
     formattedHistory.push({ role: 'user', content: prompt });
 
-    console.log('Formatted history:', JSON.stringify(formattedHistory));
-
     const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: 'gpt-3.5-turbo',
       messages: formattedHistory,
     });
-    return completion.choices[0].message.content || '';
+    return completion.choices[0].message?.content || '';
   } catch (error) {
     console.error('Error in GPT response:', error);
     throw error;
@@ -76,9 +70,8 @@ async function generateGPTResponse(prompt: string, history: any[]): Promise<stri
 }
 
 async function generateGeminiResponse(prompt: string): Promise<string> {
-  console.log('Using Gemini');
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
     const result = await model.generateContent(prompt);
     return result.response.text();
   } catch (error) {
@@ -88,33 +81,20 @@ async function generateGeminiResponse(prompt: string): Promise<string> {
 }
 
 async function generateClaudeResponse(prompt: string): Promise<string> {
-  console.log('Using Claude');
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     throw new Error('ANTHROPIC_API_KEY is not set');
   }
   try {
-    const response = await fetch('https://api.anthropic.com/v1/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-Key': apiKey,
-      },
-      body: JSON.stringify({
-        model: "claude-2",
-        prompt: `Human: ${prompt}\n\nAssistant:`,
-        max_tokens_to_sample: 300,
-      }),
+    const response = await anthropic.completions.create({
+      model: 'claude-2',
+      prompt: `Human: ${prompt}\n\nAssistant:`,
+      max_tokens_to_sample: 300,
     });
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    const data = await response.json();
-    return data.completion;
+
+    return response.completion.trim();
   } catch (error) {
     console.error('Error in Claude response:', error);
     throw error;
   }
 }
-
-console.log('ANTHROPIC_API_KEY is set:', !!process.env.ANTHROPIC_API_KEY);
