@@ -73,7 +73,14 @@ async function generateGeminiResponse(prompt: string): Promise<string> {
   try {
     const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
     const result = await model.generateContent(prompt);
-    return result.response.text();
+    const response = result.response.text();
+    
+    // Si la respuesta contiene información detallada sobre la imagen, la reemplazamos
+    if (response.includes("File:") && response.includes("Dimensions:")) {
+      return "Image generated successfully.";
+    }
+    
+    return response;
   } catch (error) {
     console.error('Error in Gemini response:', error);
     throw error;

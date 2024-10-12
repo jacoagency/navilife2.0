@@ -13,7 +13,9 @@ const nextConfig = {
         }
         return config;
     },
-  
+    env: {
+        FAL_KEY: process.env.FAL_KEY,
+    },
 };
 
 module.exports = nextConfig;

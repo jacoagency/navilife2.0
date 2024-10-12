@@ -3,7 +3,7 @@ import OpenAI from 'openai';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-const llmNames = ['claude', 'gpt', 'gemini'];
+const llmNames = ['claude', 'gpt', 'gemini', 'image'];
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -24,14 +24,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         {
           role: 'system',
           content: `You are an assistant that selects the most appropriate LLM for a given question.
-You have three options:
+You have four options:
 - "claude": Specialized in code, programming, algorithms, and software development.
 - "gpt": Expert in detailed explanations and complex logical reasoning.
 - "gemini": General-purpose assistant for any other query.
+- "image": For generating, creating, or manipulating images.
 
 Based on the user's question, select the most appropriate LLM according to these rules:
 - If the query is related to code, programming, or algorithms, select "claude".
 - If the query requires detailed explanations or involves complex logical reasoning, select "gpt".
+- If the query is about generating, creating, or manipulating images, select "image".
 - For any other query or if it's not clear which category it belongs to, select "gemini".
 
 Respond only with the exact name of the selected LLM in lowercase, without any additional text or explanation.`,

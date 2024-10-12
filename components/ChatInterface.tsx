@@ -5,6 +5,11 @@ import { useUser } from '@clerk/nextjs';
 import { selectLLM, generateResponse } from '@/lib/ai';
 import { saveChat, getUserHistory } from '@/lib/database';
 import { FiSend, FiMic, FiImage, FiStopCircle } from 'react-icons/fi';
+import * as fal from "@fal-ai/serverless-client";
+
+fal.config({
+  credentials: process.env.FAL_KEY,
+});
 
 interface Message {
   role: 'user' | 'assistant';
@@ -12,6 +17,10 @@ interface Message {
   llm?: string;
   type?: 'text' | 'voice' | 'image';
   url?: string;
+}
+
+interface FalResult {
+  images?: { url: string }[];
 }
 
 export default function ChatInterface() {
@@ -43,26 +52,85 @@ export default function ChatInterface() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
-    await sendMessage(input);
+
+    const imageKeywords = ['generate image', 'create image', 'make an image', 'draw'];
+    const isImageRequest = imageKeywords.some(keyword => input.toLowerCase().includes(keyword));
+
+    if (isImageRequest) {
+      await generateImage(input);
+    } else {
+      await sendMessage(input);
+    }
   };
 
   const sendMessage = async (content: string, type: 'text' | 'voice' | 'image' = 'text', url?: string) => {
     setIsLoading(true);
     try {
       const selectedLLM = await selectLLM(content);
-      const response = await generateResponse(selectedLLM, content, chatHistory);
-
-      const newMessage: Message = { role: 'user', content, type, url };
-      const newResponse: Message = { role: 'assistant', content: response, llm: selectedLLM };
-
-      setChatHistory((prev) => [...prev, newMessage, newResponse]);
-      await saveChat(user!.id, newMessage, newResponse);
+      
+      if (selectedLLM === 'image') {
+        await generateImage(content);
+      } else {
+        const response = await generateResponse(selectedLLM, content, chatHistory);
+        const newMessage: Message = { role: 'user', content, type, url };
+        const newResponse: Message = { role: 'assistant', content: response, llm: selectedLLM };
+        setChatHistory((prev) => [...prev, newMessage, newResponse]);
+        await saveChat(user!.id, newMessage, newResponse);
+      }
 
       setInput('');
     } catch (error) {
       console.error('Error in sendMessage:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const generateImage = async (prompt: string) => {
+    try {
+      console.log('Generating image with prompt:', prompt);
+
+      const result = await fal.subscribe("fal-ai/flux/dev", {
+        input: {
+          prompt: prompt,
+          image_size: "landscape_4_3",
+        },
+        logs: true,
+        onQueueUpdate: (update) => {
+          console.log('Queue update:', update);
+          if (update.status === "IN_PROGRESS") {
+            console.log("Generation in progress:", update.logs);
+          }
+        },
+      }) as FalResult;
+
+      console.log('Fal AI response:', result);
+
+      if (result.images && result.images.length > 0) {
+        console.log('Image generated:', result.images[0].url);
+        const newMessage: Message = {
+          role: 'user',
+          content: `Generated image: ${prompt}`,
+          type: 'image',
+          url: result.images[0].url
+        };
+        const assistantMessage: Message = {
+          role: 'assistant',
+          content: 'Here\'s the image you requested:',
+          type: 'text'
+        };
+        setChatHistory(prev => [...prev, newMessage, assistantMessage]);
+      } else {
+        throw new Error('No images generated');
+      }
+    } catch (error) {
+      console.error('Error generating image:', error);
+      const errorMessage: Message = {
+        role: 'assistant',
+        content: 'Sorry, I couldn\'t generate the image. Please try again.',
+        type: 'text'
+      };
+      setChatHistory(prev => [...prev, errorMessage]);
     }
   };
 
@@ -144,6 +212,19 @@ export default function ChatInterface() {
     }
   };
 
+  const handleImageGenerated = (imageUrl: string) => {
+    console.log('Image generated:', imageUrl); // Add this log
+    const newMessage: Message = {
+      role: 'user',
+      content: 'Generated image',
+      type: 'image',
+      url: imageUrl
+    };
+    setChatHistory(prev => [...prev, newMessage]);
+    // You might want to send a message to the AI about the generated image
+    sendMessage('I generated an image', 'text');
+  };
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -154,11 +235,16 @@ export default function ChatInterface() {
                 message.role === 'user' ? 'bg-blue-100 text-blue-900' : 'bg-gray-100 text-gray-900'
               }`}
             >
-              {message.type === 'voice' && (
-                <audio controls src={message.url} className="mb-2" />
-              )}
-              {message.type === 'image' && (
-                <img src={message.url} alt="Uploaded" className="mb-2 max-w-full h-auto" />
+              {message.type === 'image' && message.url && (
+                <img 
+                  src={message.url} 
+                  alt="Generated" 
+                  className="mb-2 max-w-full h-auto rounded"
+                  onError={(e) => {
+                    console.error('Image failed to load:', e);
+                    e.currentTarget.src = 'path/to/fallback/image.jpg'; // Opcional: imagen de respaldo
+                  }}
+                />
               )}
               <p>{message.content}</p>
               {message.llm && (
@@ -177,7 +263,7 @@ export default function ChatInterface() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             className="flex-grow p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Type your message..."
+            placeholder="Type your message or '/image' to generate an image..."
             disabled={isLoading}
           />
           <button
@@ -188,16 +274,6 @@ export default function ChatInterface() {
           >
             {isRecording ? <FiStopCircle size={20} /> : <FiMic size={20} />}
           </button>
-          <label className="p-2 bg-blue-500 text-white rounded hover:opacity-80 transition duration-150 ease-in-out cursor-pointer">
-            <FiImage size={20} />
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleImageUpload}
-              disabled={isLoading}
-            />
-          </label>
           <button
             type="submit"
             className="p-2 bg-blue-500 text-white rounded hover:opacity-80 transition duration-150 ease-in-out"

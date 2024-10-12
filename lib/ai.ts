@@ -4,6 +4,15 @@ import Anthropic from '@anthropic-ai/sdk';
 
 export async function selectLLM(prompt: string): Promise<string> {
   try {
+    // Check if the prompt is related to image generation
+    const imageKeywords = ['generate image', 'create image', 'make an image', 'draw', 'picture of'];
+    const isImageRequest = imageKeywords.some(keyword => prompt.toLowerCase().includes(keyword));
+
+    if (isImageRequest) {
+      console.log('Image generation request detected');
+      return 'image';
+    }
+
     const response = await fetch('/api/selectLLM', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
