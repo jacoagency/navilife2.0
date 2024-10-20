@@ -1,6 +1,6 @@
 'use server'
 
-import { auth } from '@clerk/nextjs'
+import { revalidatePath } from 'next/cache'
 import Pusher from 'pusher'
 
 const pusher = new Pusher({
@@ -11,29 +11,18 @@ const pusher = new Pusher({
   useTLS: true,
 })
 
-export async function sendMessage({
-  userId,
-  userName,
-  content,
-}: {
+export async function sendMessage(message: {
   userId: string
   userName: string
   content: string
 }) {
-  const { userId: authUserId } = auth()
-
-  if (!authUserId || authUserId !== userId) {
-    throw new Error('Unauthorized')
-  }
-
-  const message = {
+  const newMessage = {
     id: Math.random().toString(36).substr(2, 9),
-    userId,
-    userName,
-    content,
+    ...message,
     createdAt: new Date().toISOString(),
   }
-  await pusher.trigger('chat', 'message', message)
+  await pusher.trigger('chat', 'message', newMessage)
 
-  return message
+  revalidatePath('/chat/[id]', 'page')
+  return newMessage
 }
