@@ -2,10 +2,15 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import OpenAI from 'openai';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import Anthropic from '@anthropic-ai/sdk';
+import * as fal from "@fal-ai/serverless-client";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY as string);
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+fal.config({
+  credentials: process.env.FAL_KEY,
+});
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -33,7 +38,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Handle the new agent functionality
     if (llm && prompt) {
-      let response: string;
+      let response: string | { imageUrl: string };
 
       switch (llm) {
         case 'gpt':
@@ -44,6 +49,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           break;
         case 'claude':
           response = await generateClaudeResponse(prompt);
+          break;
+        case 'image':
+          response = await generateImage(prompt);
           break;
         default:
           throw new Error(`Unsupported LLM: ${llm}`);
@@ -117,6 +125,31 @@ async function generateClaudeResponse(prompt: string): Promise<string> {
     return response.completion.trim();
   } catch (error) {
     console.error('Error in Claude response:', error);
+    throw error;
+  }
+}
+
+interface FalResult {
+  images?: { url: string }[];
+}
+
+async function generateImage(prompt: string): Promise<{ imageUrl: string }> {
+  try {
+    const result = await fal.subscribe("fal-ai/flux/dev", {
+      input: {
+        prompt: prompt,
+        image_size: "landscape_4_3",
+      },
+      logs: true,
+    }) as FalResult; // Type assertion here
+
+    if (result.images && result.images.length > 0) {
+      return { imageUrl: result.images[0].url };
+    } else {
+      throw new Error('No images generated');
+    }
+  } catch (error) {
+    console.error('Error generating image:', error);
     throw error;
   }
 }

@@ -15,7 +15,7 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   llm?: string;
-  type?: 'text' | 'voice' | 'image';
+  type: 'text' | 'voice' | 'image';
   url?: string;
 }
 
@@ -23,7 +23,12 @@ interface FalResult {
   images?: { url: string }[];
 }
 
-export default function ChatInterface() {
+interface ChatInterfaceProps {
+  onNewMessage?: (message: Message, response: Message) => Promise<void>;
+  isStudioChat: boolean;
+}
+
+export default function ChatInterface({ onNewMessage, isStudioChat }: ChatInterfaceProps) {
   const { user } = useUser();
   const [input, setInput] = useState('');
   const [chatHistory, setChatHistory] = useState<Message[]>([]);
@@ -42,7 +47,7 @@ export default function ChatInterface() {
 
   const loadUserHistory = async () => {
     try {
-      const history = await getUserHistory(user!.id);
+      const history = await getUserHistory(user!.id, isStudioChat);
       setChatHistory(history);
     } catch (error) {
       console.error('Error loading user history:', error);
@@ -73,9 +78,25 @@ export default function ChatInterface() {
       } else {
         const response = await generateResponse(selectedLLM, content, chatHistory);
         const newMessage: Message = { role: 'user', content, type, url };
-        const newResponse: Message = { role: 'assistant', content: response, llm: selectedLLM };
+        let newResponse: Message;
+
+        if (typeof response === 'string') {
+          newResponse = { role: 'assistant', content: response, llm: selectedLLM, type: 'text' };
+        } else {
+          newResponse = { 
+            role: 'assistant', 
+            content: 'Here\'s the image you requested:', 
+            llm: selectedLLM,
+            type: 'image',
+            url: response.url
+          };
+        }
+
         setChatHistory((prev) => [...prev, newMessage, newResponse]);
-        await saveChat(user!.id, newMessage, newResponse);
+
+        if (onNewMessage) {
+          await onNewMessage(newMessage, newResponse);
+        }
       }
 
       setInput('');

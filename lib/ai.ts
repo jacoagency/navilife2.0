@@ -37,7 +37,7 @@ export async function generateResponse(
   llm: string,
   prompt: string,
   history: any[]
-): Promise<string> {
+): Promise<string | { type: 'image', url: string }> {
   try {
     const response = await fetch('/api/generate', {
       method: 'POST',
@@ -52,11 +52,14 @@ export async function generateResponse(
     }
 
     const data = await response.json();
-    if (!data.response) {
+    if (data.response && typeof data.response === 'object' && 'imageUrl' in data.response) {
+      return { type: 'image', url: data.response.imageUrl };
+    } else if (typeof data.response === 'string') {
+      return data.response;
+    } else {
       console.error('Unexpected response format:', data);
       throw new Error('Unexpected response format from server');
     }
-    return data.response;
   } catch (error) {
     console.error('Error in generateResponse:', error);
     throw error;

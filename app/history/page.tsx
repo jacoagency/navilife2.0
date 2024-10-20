@@ -1,78 +1,81 @@
-"use client";
+'use client';
 
 import { useUser } from '@clerk/nextjs';
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { getUserHistory } from '@/lib/database';
+import { Message } from '@/types/chat';
 
-interface ChatEntry {
-  message: { content: string };
-  response: { content: string; llm: string };
-  timestamp: string;
+interface Conversation {
+  userMessage: Message;
+  assistantMessage: Message;
 }
 
 export default function HistoryPage() {
   const { user } = useUser();
-  const [history, setHistory] = useState<ChatEntry[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user) {
-      loadHistory();
-    }
+    if (user) loadUserHistory();
   }, [user]);
 
-  const loadHistory = async () => {
-    if (user) {
-      const userHistory = await getUserHistory(user.id);
-      setHistory(userHistory);
+  const loadUserHistory = async () => {
+    try {
+      const history = await getUserHistory(user!.id);
+      console.log('Loaded history:', history);
+      
+      if (history.length === 0) {
+        setError('No chat history available.');
+        return;
+      }
+      
+      // Group messages into conversations
+      const groupedConversations: Conversation[] = [];
+      for (let i = 0; i < history.length; i += 2) {
+        if (i + 1 < history.length && history[i].role === 'user' && history[i + 1].role === 'assistant') {
+          groupedConversations.push({
+            userMessage: history[i],
+            assistantMessage: history[i + 1]
+          });
+        }
+      }
+      
+      console.log('Grouped conversations:', groupedConversations);
+      setConversations(groupedConversations);
+    } catch (error) {
+      console.error('Error loading user history:', error);
+      setError('Failed to load chat history. Please try again later.');
     }
   };
 
   return (
-    <div style={{
-      maxWidth: '800px',
-      margin: '0 auto',
-      padding: '2rem',
-      backgroundColor: '#f3f4f6',
-      minHeight: '100vh',
-      color: 'black', // Set the default text color to black
-    }}>
-      <h1 style={{
-        fontSize: '2.5rem',
-        fontWeight: 'bold',
-        color: '#1f2937', // Keep the title color dark
-        marginBottom: '2rem',
-        textAlign: 'center',
-      }}>
-        Chat History
-      </h1>
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '1rem',
-      }}>
-        {history.length === 0 ? (
-          <p style={{ textAlign: 'center', color: '#4b5563' }}>No chat history available.</p>
-        ) : (
-          history.map((chat, index) => (
-            <div key={index} style={{
-              backgroundColor: 'white',
-              borderRadius: '0.5rem',
-              padding: '1rem',
-              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
-            }}>
-              <p style={{ fontWeight: 'bold', marginBottom: '0.5rem', color: 'black' }}>
-                User: {chat.message.content}
-              </p>
-              <p style={{ marginBottom: '0.5rem', color: 'black' }}>
-                AI ({chat.response.llm}): {chat.response.content}
-              </p>
-              <p style={{ fontSize: '0.875rem', color: '#4b5563' }}>
-                {new Date(chat.timestamp).toLocaleString()}
-              </p>
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">Chat History</h1>
+      {error ? (
+        <p className="text-red-500">{error}</p>
+      ) : conversations.length === 0 ? (
+        <p>Loading chat history...</p>
+      ) : (
+        <div className="space-y-6">
+          {conversations.map((conversation, index) => (
+            <div key={index} className="border rounded-lg p-4 bg-gray-50">
+              <div className="mb-2">
+                <p className="font-bold text-blue-600">You:</p>
+                <p className="ml-4">{conversation.userMessage.content}</p>
+              </div>
+              <div>
+                <p className="font-bold text-green-600">Assistant:</p>
+                <p className="ml-4">{conversation.assistantMessage.content}</p>
+                {conversation.assistantMessage.llm && (
+                  <p className="text-xs mt-1 text-gray-500 ml-4">
+                    via {conversation.assistantMessage.llm.toUpperCase()}
+                  </p>
+                )}
+              </div>
             </div>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

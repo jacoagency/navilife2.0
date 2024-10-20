@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import AgentBox from '@/components/AgentBox';
 
 interface Agent {
@@ -15,7 +14,6 @@ export default function RoomPage() {
   const [isCreatingAgent, setIsCreatingAgent] = useState(false);
   const [newAgentName, setNewAgentName] = useState('');
   const [newAgentPrompt, setNewAgentPrompt] = useState('');
-  const router = useRouter();
 
   useEffect(() => {
     fetchAgents();
@@ -49,45 +47,55 @@ export default function RoomPage() {
     }
   };
 
+  const deleteAgent = async (id: string) => {
+    const response = await fetch(`/api/agents/${id}`, {
+      method: 'DELETE',
+    });
+
+    if (response.ok) {
+      fetchAgents();
+    }
+  };
+
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Agent Room</h1>
       
       {/* Agent Creation Section */}
-      <div className="mb-8">
+      <div className="mb-6">
         {!isCreatingAgent ? (
           <button
             onClick={() => setIsCreatingAgent(true)}
-            className="bg-blue-500 text-white px-4 py-2 rounded"
+            className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors duration-200"
           >
             Create New Agent
           </button>
         ) : (
-          <div className="bg-gray-100 p-4 rounded">
+          <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
             <input
               type="text"
               value={newAgentName}
               onChange={(e) => setNewAgentName(e.target.value)}
               placeholder="Enter agent name"
-              className="w-full p-2 mb-2 border rounded"
+              className="w-full p-2 mb-2 border rounded-md"
             />
             <textarea
               value={newAgentPrompt}
               onChange={(e) => setNewAgentPrompt(e.target.value)}
               placeholder="Enter agent prompt"
-              className="w-full p-2 mb-2 border rounded"
+              className="w-full p-2 mb-2 border rounded-md"
               rows={3}
             />
             <div>
               <button
                 onClick={createAgent}
-                className="bg-green-500 text-white px-4 py-2 rounded mr-2"
+                className="bg-green-500 text-white px-4 py-2 rounded-md mr-2 hover:bg-green-600 transition-colors duration-200"
               >
                 Create
               </button>
               <button
                 onClick={() => setIsCreatingAgent(false)}
-                className="bg-red-500 text-white px-4 py-2 rounded"
+                className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition-colors duration-200"
               >
                 Cancel
               </button>
@@ -97,11 +105,12 @@ export default function RoomPage() {
       </div>
 
       {/* Agent Boxes Section */}
-      <div className="grid grid-cols-3 gap-4 mb-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
         {agents.map((agent) => (
           <AgentBox
             key={agent._id}
             agent={agent}
+            onDelete={deleteAgent}
           />
         ))}
       </div>
