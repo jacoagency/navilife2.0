@@ -4,15 +4,9 @@ const nextConfig = {
     experimental: {
         serverActions: true,
     },
-    webpack: (config, { isServer }) => {
-        if (!isServer) {
-            config.resolve.fallback = {
-                ...config.resolve.fallback,
-                dns: false,
-                fs: false,
-                net: false,
-                tls: false,
-            };
+    webpack: (config, { dev, isServer }) => {
+        if (dev && !isServer) {
+            config.cache = false;
         }
         return config;
     },

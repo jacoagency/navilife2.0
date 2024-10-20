@@ -33,7 +33,6 @@ export async function sendMessage({
     content,
     createdAt: new Date().toISOString(),
   }
-
   await pusher.trigger('chat', 'message', message)
 
   return message
