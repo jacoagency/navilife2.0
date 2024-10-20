@@ -1,108 +1,102 @@
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
-import { FiSend } from 'react-icons/fi';
-import axios from 'axios';
+import { useState, useEffect, useRef } from 'react'
+import Pusher from 'pusher-js'
+import { useUser } from '@clerk/nextjs'
+import { sendMessage } from "../lib/actions"
 
-interface Message {
-  role: 'user' | 'assistant';
-  content: string;
+type Message = {
+  id: string
+  userId: string
+  userName: string
+  content: string
+  createdAt: string
 }
 
-export default function RoomInterface() {
-  const { user } = useUser();
-  const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [sessionId, setSessionId] = useState<string | null>(null);
+type User = {
+  id: string
+  name: string
+}
+
+export default function ChatComponent({ initialUser }: { initialUser: User }) {
+  const [messages, setMessages] = useState<Message[]>([])
+  const [newMessage, setNewMessage] = useState('')
+  const messageEndRef = useRef<HTMLDivElement>(null)
+  const { user } = useUser()
 
   useEffect(() => {
-    initializeSession();
-  }, []);
+    const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
+      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+    })
 
-  const initializeSession = async () => {
-    try {
-      const chatSession = await axios.post(
-        'https://agentivehub.com/api/chat/session',
-        {
-          "api_key": "a4212202-8972-48fc-a28e-6e284e9ecb69",
-          "assistant_id": "014bd7d4-6dda-49c1-92f2-4fa2a11ed921",
-        }
-      );
-      setSessionId(chatSession.data.session_id);
-    } catch (error) {
-      console.error('Error initializing session:', error);
+    const channel = pusher.subscribe('chat')
+    channel.bind('message', (data: Message) => {
+      setMessages((prevMessages) => [...prevMessages, data])
+    })
+
+    return () => {
+      pusher.unsubscribe('chat')
     }
-  };
+  }, [])
+
+  useEffect(() => {
+    messageEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isLoading || !sessionId) return;
-    setIsLoading(true);
+    e.preventDefault()
+    if (newMessage.trim() === '') return
 
-    try {
-      const newMessage: Message = { role: 'user', content: input };
-      setMessages((prev) => [...prev, newMessage]);
+    await sendMessage({
+      userId: initialUser.id,
+      userName: user?.firstName ?? initialUser.name,
+      content: newMessage,
+    })
 
-      const chatResponse = {
-        api_key: "a4212202-8972-48fc-a28e-6e284e9ecb69",
-        session_id: sessionId,
-        type: 'custom_code',
-        assistant_id: "014bd7d4-6dda-49c1-92f2-4fa2a11ed921",
-        messages: [newMessage],
-      };
-
-      const chat = await axios.post(
-        'https://agentivehub.com/api/chat',
-        chatResponse
-      );
-
-      const assistantMessage: Message = { role: 'assistant', content: chat.data.content };
-      setMessages((prev) => [...prev, assistantMessage]);
-      setInput('');
-    } catch (error) {
-      console.error('Error in handleSubmit:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    setNewMessage('')
+  }
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex-grow p-4 space-y-4 overflow-y-auto">
-        {messages.map((message, index) => (
-          <div key={index} className={`${message.role === 'user' ? 'text-right' : 'text-left'}`}>
-            <div className={`inline-block max-w-[70%] p-3 rounded-lg ${
-              message.role === 'user' ? 'bg-blue-100 text-blue-900' : 'bg-gray-100 text-gray-900'
-            }`}>
+    <div className="flex flex-col h-[600px] border rounded-lg">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.map((message) => (
+          <div
+            key={message.id}
+            className={`flex ${
+              message.userId === initialUser.id ? 'justify-end' : 'justify-start'
+            }`}
+          >
+            <div
+              className={`max-w-xs px-4 py-2 rounded-lg ${
+                message.userId === initialUser.id
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-200'
+              }`}
+            >
+              <p className="font-bold">{message.userName}</p>
               <p>{message.content}</p>
             </div>
           </div>
         ))}
-        {isLoading && (
-          <div className="text-center text-gray-500">Processing...</div>
-        )}
+        <div ref={messageEndRef} />
       </div>
-      <form onSubmit={handleSubmit} className="p-4 border-t border-gray-200">
-        <div className="flex items-center space-x-2">
+      <form onSubmit={handleSubmit} className="p-4 border-t">
+        <div className="flex space-x-2">
           <input
             type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            className="flex-grow p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Type your message..."
-            disabled={isLoading || !sessionId}
+            className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <button
             type="submit"
-            className="p-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition duration-150 ease-in-out"
-            disabled={isLoading || !sessionId}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <FiSend size={20} />
+            Send
           </button>
         </div>
       </form>
     </div>
-  );
+  )
 }
