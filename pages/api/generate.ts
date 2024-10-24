@@ -18,51 +18,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { llm, prompt, history, userMessage } = req.body;
+    const { llm, prompt, history } = req.body;
 
-    console.log('Received request:', { llm, prompt, history, userMessage });
+    let response: string | { imageUrl: string };
 
-    // Handle the original chat room functionality
-    if (prompt && userMessage) {
-      const completion = await openai.chat.completions.create({
-        model: 'gpt-3.5-turbo',
-        messages: [
-          { role: 'system', content: prompt },
-          { role: 'user', content: userMessage }
-        ],
-      });
-
-      console.log('OpenAI response:', completion.choices[0].message);
-      return res.status(200).json({ completion: completion.choices[0].message.content });
+    switch (llm) {
+      case 'gpt':
+        response = await generateGPTResponse(prompt, history);
+        break;
+      case 'gemini':
+        response = await generateGeminiResponse(prompt);
+        break;
+      case 'claude':
+        response = await generateClaudeResponse(prompt);
+        break;
+      case 'image':
+        response = await generateImage(prompt);
+        break;
+      default:
+        throw new Error(`Unsupported LLM: ${llm}`);
     }
 
-    // Handle the new agent functionality
-    if (llm && prompt) {
-      let response: string | { imageUrl: string };
-
-      switch (llm) {
-        case 'gpt':
-          response = await generateGPTResponse(prompt, history);
-          break;
-        case 'gemini':
-          response = await generateGeminiResponse(prompt);
-          break;
-        case 'claude':
-          response = await generateClaudeResponse(prompt);
-          break;
-        case 'image':
-          response = await generateImage(prompt);
-          break;
-        default:
-          throw new Error(`Unsupported LLM: ${llm}`);
-      }
-
-      console.log('LLM response:', response);
-      return res.status(200).json({ response });
-    }
-
-    console.log('Invalid request parameters');
-    return res.status(400).json({ error: 'Invalid request parameters' });
+    console.log('LLM response:', response);
+    return res.status(200).json({ response });
   } catch (error) {
     console.error('Error in request:', error);
     return res.status(500).json({ error: 'Error processing your request', details: error instanceof Error ? error.message : String(error) });
@@ -99,9 +77,7 @@ async function generateGeminiResponse(prompt: string): Promise<string> {
     const result = await model.generateContent(prompt);
     const response = result.response.text();
     
-    if (response.includes("File:") && response.includes("Dimensions:")) {
-      return "Image generated successfully.";
-    }
+    console.log('Gemini response:', response);
     
     return response;
   } catch (error) {

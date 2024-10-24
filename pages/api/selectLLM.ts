@@ -17,7 +17,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Use GPT-3.5 to analyze the content
     const completion = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [
@@ -50,6 +49,7 @@ Respond only with the exact name of the selected LLM in lowercase, without any a
     // Ensure the assistant's response is one of the expected LLM names
     const selectedLLM = llmNames.includes(assistantResponse) ? assistantResponse : 'gemini';
 
+    console.log('Final selected LLM:', selectedLLM);
     res.status(200).json({ selectedLLM });
   } catch (error) {
     console.error('Error selecting LLM:', error);

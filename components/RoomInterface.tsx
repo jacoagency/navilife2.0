@@ -4,22 +4,21 @@ import { useState, useEffect, useRef } from 'react'
 import Pusher from 'pusher-js'
 import { useUser } from '@clerk/nextjs'
 import { sendMessage } from '../lib/actions'
-
-type Message = {
-  id: string
-  userId: string
-  userName: string
-  content: string
-  createdAt: string
-}
+import { generateResponse } from '@/lib/ai'
+import { Message } from '@/types/chat'
 
 interface RoomInterfaceProps {
   roomId: string;
-  prompt: string;
+  agentPrompt: string;
 }
 
-export default function RoomInterface({ roomId, prompt }: RoomInterfaceProps) {
-  const [liveMessages, setLiveMessages] = useState<Message[]>([])
+interface ExtendedMessage extends Message {
+  userId?: string;
+  userName?: string;
+}
+
+export default function RoomInterface({ roomId, agentPrompt }: RoomInterfaceProps) {
+  const [liveMessages, setLiveMessages] = useState<ExtendedMessage[]>([])
   const [newMessage, setNewMessage] = useState('')
   const messageEndRef = useRef<HTMLDivElement>(null)
   const { user } = useUser()
@@ -30,9 +29,9 @@ export default function RoomInterface({ roomId, prompt }: RoomInterfaceProps) {
     })
 
     const channel = pusher.subscribe('chat')
-    channel.bind('message', (data: Message) => {
+    channel.bind('message', (data: ExtendedMessage) => {
       setLiveMessages((prevMessages) => [...prevMessages, data])
-      if (data.userId !== 'gpt') {
+      if (data.role === 'user' && data.userId === user?.id) {
         handleAgentResponse(data.content)
       }
     })
@@ -40,7 +39,7 @@ export default function RoomInterface({ roomId, prompt }: RoomInterfaceProps) {
     return () => {
       pusher.unsubscribe('chat')
     }
-  }, [])
+  }, [user])
 
   useEffect(() => {
     messageEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -48,33 +47,38 @@ export default function RoomInterface({ roomId, prompt }: RoomInterfaceProps) {
 
   const handleAgentResponse = async (userMessage: string) => {
     try {
-      const response = await fetch('/api/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ prompt, userMessage }),
-      });
+      const selectedLLM = 'gemini';
+      console.log('Using LLM:', selectedLLM);
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      // Construir el mensaje completo incluyendo el prompt del agente
+      const fullPrompt = `${agentPrompt}\n\nUser: ${userMessage}\nAssistant:`;
+      console.log('Full prompt:', fullPrompt);
+
+      const response = await generateResponse(selectedLLM, fullPrompt, liveMessages);
+
+      let content: string;
+      if (typeof response === 'object' && 'type' in response && response.type === 'image') {
+        content = `Image generated: ${response.url}`;
+      } else {
+        content = response as string;
       }
 
-      const data = await response.json();
-      if (data.completion) {
-        await sendMessage({
-          userId: 'gpt',
-          userName: 'Agent',
-          content: data.completion.trim(),
-        })
-      }
+      await sendMessage({
+        userId: 'gpt',
+        userName: 'Agent',
+        content: content,
+        role: 'assistant',
+        llm: selectedLLM
+      } as ExtendedMessage)
     } catch (error) {
       console.error('Error getting AI response:', error)
       await sendMessage({
         userId: 'gpt',
         userName: 'Agent',
-        content: 'Lo siento, hubo un error al procesar tu solicitud.',
-      })
+        content: 'Sorry, there was an error processing your request.',
+        role: 'assistant',
+        llm: 'error'
+      } as ExtendedMessage)
     }
   }
 
@@ -82,12 +86,12 @@ export default function RoomInterface({ roomId, prompt }: RoomInterfaceProps) {
     e.preventDefault()
     if (newMessage.trim() === '') return
 
-    // Send user message to live chat
     await sendMessage({
       userId: user?.id ?? 'anonymous',
       userName: user?.firstName ?? 'Anonymous',
       content: newMessage,
-    })
+      role: 'user'
+    } as ExtendedMessage)
 
     setNewMessage('')
   }
@@ -95,16 +99,16 @@ export default function RoomInterface({ roomId, prompt }: RoomInterfaceProps) {
   return (
     <div className="flex flex-col h-[600px] border rounded-lg">
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {liveMessages.map((message) => (
+        {liveMessages.map((message, index) => (
           <div
-            key={message.id}
+            key={index}
             className={`flex ${
-              message.userId === user?.id ? 'justify-end' : 'justify-start'
+              message.role === 'user' ? 'justify-end' : 'justify-start'
             }`}
           >
             <div
               className={`max-w-xs px-4 py-2 rounded-lg ${
-                message.userId === user?.id
+                message.role === 'user'
                   ? 'bg-blue-500 text-white'
                   : message.userId === 'gpt'
                   ? 'bg-green-500 text-white'
@@ -113,6 +117,9 @@ export default function RoomInterface({ roomId, prompt }: RoomInterfaceProps) {
             >
               <p className="font-bold">{message.userName}</p>
               <p>{message.content}</p>
+              {message.llm && (
+                <p className="text-xs mt-1 opacity-75">via {message.llm.toUpperCase()}</p>
+              )}
             </div>
           </div>
         ))}

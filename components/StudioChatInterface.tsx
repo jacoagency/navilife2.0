@@ -1,71 +1,81 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useUser } from '@clerk/nextjs';
-import { selectLLM, generateResponse } from '@/lib/ai';
-import { saveChat, getUserHistory } from '@/lib/database';
-import { FiSend, FiImage } from 'react-icons/fi';
-import { Message } from '@/types/chat';
+import { FiSend } from 'react-icons/fi';
+import * as fal from "@fal-ai/serverless-client";
+
+// Use NEXT_PUBLIC_FAL_KEY instead of FAL_KEY
+fal.config({
+  credentials: process.env.NEXT_PUBLIC_FAL_KEY,
+});
+
+interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+  type: 'text' | 'image';
+  url?: string;
+}
+
+interface FalResult {
+  images?: { url: string }[];
+}
 
 export default function StudioChatInterface() {
-  const { user } = useUser();
   const [input, setInput] = useState('');
   const [chatHistory, setChatHistory] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (user) loadUserHistory();
-  }, [user]);
-
-  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatHistory]);
-
-  const loadUserHistory = async () => {
-    try {
-      const history = await getUserHistory(user!.id, true); // true for isStudioChat
-      setChatHistory(history);
-    } catch (error) {
-      console.error('Error loading user history:', error);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
-    await sendMessage(input);
+    await generateImage(input);
   };
 
-  const sendMessage = async (content: string) => {
+  const generateImage = async (prompt: string) => {
     setIsLoading(true);
     try {
-      const selectedLLM = await selectLLM(content);
-      const response = await generateResponse(selectedLLM, content, chatHistory);
-      
-      const newMessage: Message = { role: 'user', content, type: 'text' };
-      let newResponse: Message;
+      const userMessage: Message = { role: 'user', content: prompt, type: 'text' };
+      setChatHistory((prev) => [...prev, userMessage]);
 
-      if (typeof response === 'string') {
-        newResponse = { role: 'assistant', content: response, llm: selectedLLM, type: 'text' };
-      } else {
-        newResponse = { 
-          role: 'assistant', 
-          content: 'Here\'s the image you requested:', 
-          llm: selectedLLM,
-          type: 'image',
-          url: response.url
-        };
+      console.log('Generating image with prompt:', prompt);
+
+      const response = await fetch('/api/generateImage', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      setChatHistory((prev) => [...prev, newMessage, newResponse]);
-      await saveChat(user!.id, newMessage, newResponse, true); // true for isStudioChat
+      const result = await response.json();
+
+      if (result.imageUrl) {
+        const newResponse: Message = { 
+          role: 'assistant', 
+          content: 'Here\'s the image you requested:', 
+          type: 'image',
+          url: result.imageUrl
+        };
+        setChatHistory((prev) => [...prev, newResponse]);
+      } else {
+        throw new Error('No image URL in response');
+      }
+
       setInput('');
     } catch (error) {
-      console.error('Error in sendMessage:', error);
+      console.error('Error generating image:', error);
       const errorMessage: Message = {
         role: 'assistant',
-        content: 'Sorry, there was an error processing your request.',
+        content: `Sorry, there was an error generating the image: ${error instanceof Error ? error.message : 'Unknown error'}`,
         type: 'text'
       };
       setChatHistory(prev => [...prev, errorMessage]);
@@ -96,13 +106,10 @@ export default function StudioChatInterface() {
                 />
               )}
               <p>{message.content}</p>
-              {message.llm && (
-                <p className="text-xs mt-1 opacity-75">via {message.llm.toUpperCase()}</p>
-              )}
             </div>
           </div>
         ))}
-        {isLoading && <div className="text-center text-gray-500">Processing...</div>}
+        {isLoading && <div className="text-center text-gray-500">Generating image...</div>}
         <div ref={messagesEndRef} />
       </div>
       <form onSubmit={handleSubmit} className="p-4 border-t border-gray-200">
@@ -112,7 +119,7 @@ export default function StudioChatInterface() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             className="flex-grow p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Type your message or 'generate image: [prompt]' to create an image..."
+            placeholder="Describe the image you want to generate..."
             disabled={isLoading}
           />
           <button
@@ -120,7 +127,7 @@ export default function StudioChatInterface() {
             className="p-2 bg-blue-500 text-white rounded hover:opacity-80 transition duration-150 ease-in-out"
             disabled={isLoading}
           >
-            {input.toLowerCase().includes('generate image') ? <FiImage size={20} /> : <FiSend size={20} />}
+            <FiSend size={20} />
           </button>
         </div>
       </form>

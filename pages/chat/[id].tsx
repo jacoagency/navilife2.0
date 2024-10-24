@@ -38,7 +38,7 @@ export default function ChatRoomPage() {
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">{room.name}</h1>
-      <RoomInterface roomId={room.id} prompt={room.prompt} />
+      <RoomInterface roomId={room.id} agentPrompt={room.prompt} />
     </div>
   );
 }

@@ -1,8 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import clientPromise from '@/lib/mongodb';
-import formidable from 'formidable';
-import fs from 'fs';
-import path from 'path';
 
 export const config = {
   api: {
@@ -23,39 +20,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       res.status(500).json({ error: 'Error fetching agents from database' });
     }
   } else if (req.method === 'POST') {
-    const form = new formidable.IncomingForm({
-      uploadDir: path.join(process.cwd(), 'public/uploads'),
-      keepExtensions: true,
-    });
+    try {
+      const { name, prompt } = req.body;
 
-    form.parse(req, async (err, fields, files) => {
-      if (err) {
-        console.error('Form parsing error:', err);
-        return res.status(500).json({ error: 'Error parsing form data' });
+      if (!name || !prompt) {
+        return res.status(400).json({ error: 'Name and prompt are required' });
       }
 
-      console.log('Fields:', fields);
-      console.log('Files:', files);
-
-      const name = Array.isArray(fields.name) ? fields.name[0] : fields.name;
-      const prompt = Array.isArray(fields.prompt) ? fields.prompt[0] : fields.prompt;
-      const file = Array.isArray(files.image) ? files.image[0] : files.image;
-
-      if (!name || !prompt || !file) {
-        return res.status(400).json({ error: 'Name, prompt, and image are required' });
-      }
-
-      const fileName = file.newFilename;
-      const imageUrl = `/uploads/${fileName}`;
-
-      try {
-        const result = await db.collection("agents").insertOne({ name, prompt, imageUrl });
-        res.status(201).json({ success: true, agent: { name, prompt, imageUrl, _id: result.insertedId } });
-      } catch (dbError) {
-        console.error('Database error:', dbError);
-        res.status(500).json({ error: 'Error saving agent to database' });
-      }
-    });
+      const result = await db.collection("agents").insertOne({ name, prompt });
+      res.status(201).json({ success: true, agent: { name, prompt, _id: result.insertedId } });
+    } catch (error) {
+      console.error('Database error:', error);
+      res.status(500).json({ error: 'Error saving agent to database' });
+    }
   } else {
     res.setHeader('Allow', ['GET', 'POST']);
     res.status(405).json({ error: `Method ${req.method} Not Allowed` });
