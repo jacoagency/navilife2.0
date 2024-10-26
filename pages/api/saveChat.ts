@@ -20,6 +20,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       res.status(200).json({ message: 'Chat saved successfully' });
     } catch (error) {
+      console.error('Error saving chat:', error); // Logs the error
       res.status(500).json({ error: 'Error saving chat' });
     } finally {
       await client.close();

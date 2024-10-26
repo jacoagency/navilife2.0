@@ -11,6 +11,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const agents = await db.collection('agents').find().toArray();
         res.status(200).json(agents);
       } catch (error) {
+        console.error('Error fetching agents:', error);  // Log the error
         res.status(500).json({ error: 'Error fetching agents' });
       }
       break;
@@ -21,6 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const insertedAgent = await db.collection('agents').findOne({ _id: result.insertedId });
         res.status(201).json(insertedAgent);
       } catch (error) {
+        console.error('Error creating agent:', error);  // Log the error
         res.status(500).json({ error: 'Error creating agent' });
       }
       break;

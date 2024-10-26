@@ -6,6 +6,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.status(500).json({ error: 'MongoDB URI is not defined' });
     return;
   }
+
   const client = new MongoClient(process.env.MONGODB_URI);
   try {
     await client.connect();
@@ -13,6 +14,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // ...
     res.status(200).json({ /* your response */ });
   } catch (error) {
+    console.error('An error occurred:', error);  // Log the error
     res.status(500).json({ error: 'An error occurred' });
   } finally {
     await client.close();

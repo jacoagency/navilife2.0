@@ -14,8 +14,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           return res.status(404).json({ error: 'Agent not found' });
         }
         res.status(200).json(agent);
-      } catch (error) {
-        res.status(500).json({ error: 'Error fetching agent' });
+      } catch (error: unknown) {
+        console.error('Error fetching agent:', error);
+        res.status(500).json({ 
+          error: 'Error fetching agent', 
+          details: error instanceof Error ? error.message : 'Unknown error' 
+        });
       }
       break;
     case 'DELETE':
@@ -25,8 +29,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           return res.status(404).json({ error: 'Agent not found' });
         }
         res.status(200).json({ message: 'Agent deleted successfully' });
-      } catch (error) {
-        res.status(500).json({ error: 'Error deleting agent' });
+      } catch (error: unknown) {
+        console.error('Error deleting agent:', error);
+        res.status(500).json({ 
+          error: 'Error deleting agent', 
+          details: error instanceof Error ? error.message : 'Unknown error' 
+        });
       }
       break;
     default:

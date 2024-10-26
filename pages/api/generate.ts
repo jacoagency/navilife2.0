@@ -12,13 +12,26 @@ fal.config({
   credentials: process.env.FAL_KEY,
 });
 
+// Define the Message interface
+interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+// Define the RequestBody interface for the request payload
+interface RequestBody {
+  llm: string;
+  prompt: string;
+  history: Message[];
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const { llm, prompt, history } = req.body;
+    const { llm, prompt, history }: RequestBody = req.body; // Destructure with type
 
     let response: string | { imageUrl: string };
 
@@ -47,7 +60,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-async function generateGPTResponse(prompt: string, history: any[]): Promise<string> {
+async function generateGPTResponse(prompt: string, history: Message[]): Promise<string> {
   try {
     const formattedHistory = Array.isArray(history)
       ? history
@@ -105,6 +118,7 @@ async function generateClaudeResponse(prompt: string): Promise<string> {
   }
 }
 
+// Define the interface for Fal result
 interface FalResult {
   images?: { url: string }[];
 }

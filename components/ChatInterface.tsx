@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { selectLLM, generateResponse } from '@/lib/ai';
-import { saveChat, getUserHistory } from '@/lib/database';
+// import { saveChat } from '@/lib/database'; // Uncomment if you plan to use saveChat later
+import { getUserHistory } from '@/lib/database';
 import { FiSend, FiMic, FiStopCircle } from 'react-icons/fi';
 import { Message } from '@/types/chat';
 
@@ -25,22 +26,24 @@ export default function ChatInterface({ onNewMessage, isStudioChat }: ChatInterf
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
+  const loadUserHistory = useCallback(async () => {
+    if (user) {
+      try {
+        const history = await getUserHistory(user.id, isStudioChat);
+        setChatHistory(history);
+      } catch (error) {
+        console.error('Error loading user history:', error);
+      }
+    }
+  }, [user, isStudioChat]);
+
   useEffect(() => {
-    if (user) loadUserHistory();
-  }, [user]);
+    loadUserHistory();
+  }, [loadUserHistory]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatHistory]);
-
-  const loadUserHistory = async () => {
-    try {
-      const history = await getUserHistory(user!.id, isStudioChat);
-      setChatHistory(history);
-    } catch (error) {
-      console.error('Error loading user history:', error);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,7 +108,7 @@ export default function ChatInterface({ onNewMessage, isStudioChat }: ChatInterf
 
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.lang = 'es-ES'; // Cambia esto al idioma que prefieras
+    recognition.lang = 'es-ES'; // Adjust language as needed
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       let interimTranscript = '';

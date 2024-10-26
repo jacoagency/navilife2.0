@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
 import ChatInterface from '@/components/ChatInterface';
 import { saveChat } from '@/lib/database';

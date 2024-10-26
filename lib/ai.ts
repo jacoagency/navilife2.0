@@ -1,6 +1,4 @@
-import OpenAI from 'openai';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import Anthropic from '@anthropic-ai/sdk';
+
 import { Message } from '@/types/chat';
 
 export async function selectLLM(prompt: string): Promise<string> {

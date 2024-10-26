@@ -3,22 +3,18 @@
 import { useState, useEffect, useRef } from 'react'
 import Pusher from 'pusher-js'
 import { useUser } from '@clerk/nextjs'
-import { sendMessage } from '../lib/actions'
 
 type Message = {
   id: string
-  userId: string
-  userName: string
   content: string
-  createdAt: string
+  sender: string
 }
 
 interface RoomInterfaceProps {
-  roomId: string;
   prompt: string;
 }
 
-export default function RoomInterface({ roomId, prompt }: RoomInterfaceProps) {
+export default function RoomInterface({ prompt }: RoomInterfaceProps) {
   const [liveMessages, setLiveMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
   const messageEndRef = useRef<HTMLDivElement>(null)
@@ -32,9 +28,6 @@ export default function RoomInterface({ roomId, prompt }: RoomInterfaceProps) {
     const channel = pusher.subscribe('chat')
     channel.bind('message', (data: Message) => {
       setLiveMessages((prevMessages) => [...prevMessages, data])
-      if (data.userId !== 'gpt') {
-        handleAgentResponse(data.content)
-      }
     })
 
     return () => {
@@ -57,24 +50,24 @@ export default function RoomInterface({ roomId, prompt }: RoomInterfaceProps) {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error('Failed to generate response');
       }
 
-      const data = await response.json();
-      if (data.completion) {
-        await sendMessage({
-          userId: 'gpt',
-          userName: 'Agent',
-          content: data.completion.trim(),
-        })
-      }
+      const { response: aiResponse } = await response.json();
+      
+      // Send the AI response to the messages API
+      await fetch('/api/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content: aiResponse,
+          sender: 'agent',
+        }),
+      });
     } catch (error) {
       console.error('Error getting AI response:', error)
-      await sendMessage({
-        userId: 'gpt',
-        userName: 'Agent',
-        content: 'Lo siento, hubo un error al procesar tu solicitud.',
-      })
     }
   }
 
@@ -82,14 +75,20 @@ export default function RoomInterface({ roomId, prompt }: RoomInterfaceProps) {
     e.preventDefault()
     if (newMessage.trim() === '') return
 
-    // Send user message to live chat
-    await sendMessage({
-      userId: user?.id ?? 'anonymous',
-      userName: user?.firstName ?? 'Anonymous',
-      content: newMessage,
-    })
+    // Send the user message to the messages API
+    await fetch('/api/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        content: newMessage,
+        sender: user?.id ?? 'anonymous',
+      }),
+    });
 
     setNewMessage('')
+    handleAgentResponse(newMessage)
   }
 
   return (
@@ -99,19 +98,18 @@ export default function RoomInterface({ roomId, prompt }: RoomInterfaceProps) {
           <div
             key={message.id}
             className={`flex ${
-              message.userId === user?.id ? 'justify-end' : 'justify-start'
+              message.sender === user?.id ? 'justify-end' : 'justify-start'
             }`}
           >
             <div
               className={`max-w-xs px-4 py-2 rounded-lg ${
-                message.userId === user?.id
+                message.sender === user?.id
                   ? 'bg-blue-500 text-white'
-                  : message.userId === 'gpt'
+                  : message.sender === 'agent'
                   ? 'bg-green-500 text-white'
                   : 'bg-gray-200'
               }`}
             >
-              <p className="font-bold">{message.userName}</p>
               <p>{message.content}</p>
             </div>
           </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { FiSend } from 'react-icons/fi';
 import * as fal from "@fal-ai/serverless-client";
+import Image from 'next/image'; // Import the Image component
 
 // Use NEXT_PUBLIC_FAL_KEY instead of FAL_KEY
 fal.config({
@@ -14,10 +15,6 @@ interface Message {
   content: string;
   type: 'text' | 'image';
   url?: string;
-}
-
-interface FalResult {
-  images?: { url: string }[];
 }
 
 export default function StudioChatInterface() {
@@ -95,13 +92,14 @@ export default function StudioChatInterface() {
               }`}
             >
               {message.type === 'image' && message.url && (
-                <img 
+                <Image 
                   src={message.url} 
                   alt="Generated" 
                   className="mb-2 max-w-full h-auto rounded"
-                  onError={(e) => {
-                    console.error('Image failed to load:', e);
-                    e.currentTarget.src = '/path/to/fallback/image.jpg'; // Optional: fallback image
+                  width={500} // Set a width (adjust as needed)
+                  height={300} // Set a height (adjust as needed)
+                  onError={() => {
+                    console.error('Image failed to load');
                   }}
                 />
               )}
