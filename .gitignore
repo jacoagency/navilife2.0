@@ -34,3 +34,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+
+.pnp.cjs
+.pnp.loader.mjs
+yarn.lock
+yarn.lock
+.yarn/
