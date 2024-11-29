@@ -27,7 +27,7 @@ export default function ChatInterface({ onNewMessage, isStudioChat }: ChatInterf
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   const loadUserHistory = useCallback(async () => {
-    if (user) {
+    if (user && isStudioChat) {
       try {
         const history = await getUserHistory(user.id, isStudioChat);
         setChatHistory(history);
@@ -156,40 +156,53 @@ export default function ChatInterface({ onNewMessage, isStudioChat }: ChatInterf
           <div key={index} className={`${message.role === 'user' ? 'text-right' : 'text-left'}`}>
             <div
               className={`inline-block max-w-[70%] p-3 rounded-lg ${
-                message.role === 'user' ? 'bg-blue-100 text-blue-900' : 'bg-gray-100 text-gray-900'
+                message.role === 'user' 
+                  ? 'bg-gradient-to-r from-blue-600/20 to-purple-600/20 text-gray-200' 
+                  : 'bg-navy-800 text-gray-200'
               }`}
             >
               <p>{message.content}</p>
               {message.llm && (
-                <p className="text-xs mt-1 opacity-75">via {message.llm.toUpperCase()}</p>
+                <p className="text-xs mt-1 text-gray-400">via {message.llm.toUpperCase()}</p>
               )}
             </div>
           </div>
         ))}
-        {isLoading && <div className="text-center text-gray-500">Thinking...</div>}
+        {isLoading && (
+          <div className="text-center text-gray-400">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-400 mx-auto"></div>
+          </div>
+        )}
         <div ref={messagesEndRef} />
       </div>
-      <form onSubmit={handleSubmit} className="p-4 border-t border-gray-200">
+      <form onSubmit={handleSubmit} className="p-4 border-t border-navy-800">
         <div className="flex items-center space-x-2">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            className="flex-grow p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-grow p-3 bg-navy-800 border border-navy-700 text-gray-200 rounded-lg 
+                     focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                     placeholder-gray-400"
             placeholder="Type your message..."
             disabled={isLoading}
           />
           <button
             type="button"
             onClick={handleVoiceNote}
-            className={`p-2 ${isRecording ? 'bg-red-500' : 'bg-blue-500'} text-white rounded hover:opacity-80 transition duration-150 ease-in-out`}
+            className={`p-3 rounded-lg transition-colors ${
+              isRecording 
+                ? 'bg-red-500 hover:bg-red-600' 
+                : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-90'
+            } text-white`}
             disabled={isLoading}
           >
             {isRecording ? <FiStopCircle size={20} /> : <FiMic size={20} />}
           </button>
           <button
             type="submit"
-            className="p-2 bg-blue-500 text-white rounded hover:opacity-80 transition duration-150 ease-in-out"
+            className="p-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg 
+                     hover:opacity-90 transition-colors disabled:opacity-50"
             disabled={isLoading}
           >
             <FiSend size={20} />

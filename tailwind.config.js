@@ -52,9 +52,16 @@ module.exports = {
   				'3': 'hsl(var(--chart-3))',
   				'4': 'hsl(var(--chart-4))',
   				'5': 'hsl(var(--chart-5))'
-  			}
+  			},
+  			navy: {
+  				800: '#1a2234',
+  				900: '#0f172a',
+  			},
   		}
-  	}
+  	},
+  	backgroundImage: {
+  		'gradient-primary': 'linear-gradient(to right, #3b82f6, #8b5cf6)',
+  	},
   },
   plugins: [require("tailwindcss-animate")],
 };

@@ -1,11 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { FiSend } from 'react-icons/fi';
+import { FiSend, FiImage, FiDownload } from 'react-icons/fi';
 import * as fal from "@fal-ai/serverless-client";
-import Image from 'next/image'; // Import the Image component
+import Image from 'next/image';
 
-// Use NEXT_PUBLIC_FAL_KEY instead of FAL_KEY
 fal.config({
   credentials: process.env.NEXT_PUBLIC_FAL_KEY,
 });
@@ -39,13 +38,9 @@ export default function StudioChatInterface() {
       const userMessage: Message = { role: 'user', content: prompt, type: 'text' };
       setChatHistory((prev) => [...prev, userMessage]);
 
-      console.log('Generating image with prompt:', prompt);
-
       const response = await fetch('/api/generateImage', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt }),
       });
 
@@ -58,7 +53,7 @@ export default function StudioChatInterface() {
       if (result.imageUrl) {
         const newResponse: Message = { 
           role: 'assistant', 
-          content: 'Here\'s the image you requested:', 
+          content: 'Here\'s your generated image:', 
           type: 'image',
           url: result.imageUrl
         };
@@ -81,6 +76,23 @@ export default function StudioChatInterface() {
     }
   };
 
+  const handleDownload = async (imageUrl: string) => {
+    try {
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `generated-image-${Date.now()}.png`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Error downloading image:', error);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -88,41 +100,65 @@ export default function StudioChatInterface() {
           <div key={index} className={`${message.role === 'user' ? 'text-right' : 'text-left'}`}>
             <div
               className={`inline-block max-w-[70%] p-3 rounded-lg ${
-                message.role === 'user' ? 'bg-blue-100 text-blue-900' : 'bg-gray-100 text-gray-900'
+                message.role === 'user' 
+                  ? 'bg-gradient-to-r from-blue-600/20 to-purple-600/20 text-gray-200' 
+                  : 'bg-navy-800 text-gray-200'
               }`}
             >
               {message.type === 'image' && message.url && (
-                <Image 
-                  src={message.url} 
-                  alt="Generated" 
-                  className="mb-2 max-w-full h-auto rounded"
-                  width={500} // Set a width (adjust as needed)
-                  height={300} // Set a height (adjust as needed)
-                  onError={() => {
-                    console.error('Image failed to load');
-                  }}
-                />
+                <div className="mb-3 relative group">
+                  <button
+                    onClick={() => handleDownload(message.url!)}
+                    className="absolute top-2 right-2 p-2 bg-black/50 rounded-full 
+                             opacity-0 group-hover:opacity-100 transition-opacity duration-200
+                             hover:bg-black/70 text-white"
+                    title="Download image"
+                  >
+                    <FiDownload size={16} />
+                  </button>
+                  <Image 
+                    src={message.url} 
+                    alt="Generated" 
+                    className="rounded-lg shadow-lg max-w-full h-auto"
+                    width={500}
+                    height={300}
+                    onError={() => console.error('Image failed to load')}
+                  />
+                </div>
               )}
               <p>{message.content}</p>
             </div>
           </div>
         ))}
-        {isLoading && <div className="text-center text-gray-500">Generating image...</div>}
+        {isLoading && (
+          <div className="text-center text-gray-400">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-400 mx-auto mb-2"></div>
+            <p>Generating your masterpiece...</p>
+          </div>
+        )}
         <div ref={messagesEndRef} />
       </div>
-      <form onSubmit={handleSubmit} className="p-4 border-t border-gray-200">
+      <form onSubmit={handleSubmit} className="p-4 border-t border-navy-800">
         <div className="flex items-center space-x-2">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            className="flex-grow p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Describe the image you want to generate..."
-            disabled={isLoading}
-          />
+          <div className="flex-grow relative">
+            <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+              <FiImage className="text-gray-400" />
+            </div>
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              className="w-full p-3 pl-10 bg-navy-800 border border-navy-700 text-gray-200 rounded-lg 
+                       focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                       placeholder-gray-400"
+              placeholder="Describe the image you want to generate..."
+              disabled={isLoading}
+            />
+          </div>
           <button
             type="submit"
-            className="p-2 bg-blue-500 text-white rounded hover:opacity-80 transition duration-150 ease-in-out"
+            className="p-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg 
+                     hover:opacity-90 transition-colors disabled:opacity-50"
             disabled={isLoading}
           >
             <FiSend size={20} />
