@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { FiPlus, FiTrash2, FiMessageSquare } from 'react-icons/fi';
+import { FiPlus, FiTrash2, FiMessageSquare, FiAlertCircle } from 'react-icons/fi';
+import Modal from '@/components/Modal';
 
 interface Agent {
   _id: string;
@@ -14,6 +15,15 @@ export default function RoomPage() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [name, setName] = useState('');
   const [prompt, setPrompt] = useState('');
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    agentId: string;
+    agentName: string;
+  }>({
+    isOpen: false,
+    agentId: '',
+    agentName: ''
+  });
 
   useEffect(() => {
     fetchAgents();
@@ -39,10 +49,21 @@ export default function RoomPage() {
     }
   };
 
-  const deleteAgent = async (id: string) => {
-    const response = await fetch(`/api/agents/${id}`, { method: 'DELETE' });
+  const handleDeleteClick = (id: string, name: string) => {
+    setDeleteModal({
+      isOpen: true,
+      agentId: id,
+      agentName: name
+    });
+  };
+
+  const deleteAgent = async () => {
+    const response = await fetch(`/api/agents/${deleteModal.agentId}`, { 
+      method: 'DELETE' 
+    });
     if (response.ok) {
       fetchAgents();
+      setDeleteModal({ isOpen: false, agentId: '', agentName: '' });
     }
   };
 
@@ -95,7 +116,7 @@ export default function RoomPage() {
                   Chat
                 </Link>
                 <button 
-                  onClick={() => deleteAgent(agent._id)}
+                  onClick={() => handleDeleteClick(agent._id, agent.name)}
                   className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
                 >
                   <FiTrash2 className="w-5 h-5" />
@@ -104,6 +125,28 @@ export default function RoomPage() {
             </div>
           ))}
         </div>
+
+        <Modal 
+          isOpen={deleteModal.isOpen}
+          onClose={() => setDeleteModal({ isOpen: false, agentId: '', agentName: '' })}
+          title="Delete Agent"
+          icon={<FiAlertCircle className="text-red-400 w-6 h-6" />}
+          actions={{
+            confirm: {
+              text: "Delete",
+              onClick: deleteAgent,
+              variant: "danger"
+            },
+            cancel: {
+              text: "Cancel"
+            }
+          }}
+        >
+          <p>
+            Are you sure you want to delete <span className="font-semibold">{deleteModal.agentName}</span>? 
+            This action cannot be undone.
+          </p>
+        </Modal>
       </div>
     </div>
   );
