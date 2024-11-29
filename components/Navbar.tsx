@@ -78,7 +78,12 @@ export default function Navbar() {
                 elements: {
                   avatarBox: "h-8 w-8",
                   userButtonPopoverCard: "bg-navy-800 border border-navy-700",
-                  userButtonPopoverText: "text-gray-300",
+                  userButtonPopoverText: "text-white",
+                  userButtonPopoverActionButton: "text-white hover:bg-navy-700",
+                  userButtonPopoverActionButtonText: "text-white",
+                  userButtonPopoverFooter: "border-navy-700",
+                  userPreviewMainIdentifier: "text-white",
+                  userPreviewSecondaryIdentifier: "text-gray-300",
                 }
               }}
             />
